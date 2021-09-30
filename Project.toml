@@ -1,0 +1,4 @@
+name = "myFilters"
+uuid = "81456be0-7a9e-4877-8423-9bcd083e1f21"
+authors = ["Stephen Gagnon <srgagnon@buffalo.edu>"]
+version = "0.1.0"
