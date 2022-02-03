@@ -10,7 +10,7 @@ include("types.jl")
 include("utilities.jl")
 include("filterFunctions.jl")
 
-export MUKF, RK4, outerProduct, UKFoptions, attFilteringProblem, filteringProblem, simulate, MUKFstep
+export MUKF, RK4, outerProduct, UKFoptions, attFilteringProblem, filteringProblem, simulate, MUKFstep, MUKFprop, MUKFupdate
 
 function MUKF(model :: attFilteringProblem, options :: UKFoptions)
 
@@ -62,7 +62,7 @@ function MUKF(model :: attFilteringProblem, options :: UKFoptions)
       Pvec = Array{Array{Float64,2},1}(undef,m)
       xvec[1] = model.initialErrorState
       Pvec[1] = model.initialCovariance
-      qvec[1] = model.estInitialState
+      qvec[1] = model.estInitialState[1:4]
       x = deepcopy(model.initialErrorState)
       P = deepcopy(model.initialCovariance)
       q = deepcopy(model.estInitialState[1:4])
@@ -97,14 +97,24 @@ end
 function MUKFstep(x, P, q, n, t, y, mtime, dynamics, measModel, Q, R, a, f, gamma, W, integrator)
       # Covariance Decomposition
       exitflag = true
-      if isposdef(P)
-            Psq = cholesky(P).U
-      elseif isposdef(P+diagm(max(diag(P)...)*8*ones(6)))
-            Psq = cholesky(P+diagm(max(diag(P)...)*8*ones(6))).U
-      else
-            @infiltrate
-            exitflag = false
-            return x, P, q, exitflag
+      # if isposdef(P)
+      #       Psq = cholesky(P).U
+      # elseif isposdef(P+diagm(max(diag(P)...)*8*ones(6)))
+      #       Psq = cholesky(P+diagm(max(diag(P)...)*8*ones(6))).U
+      # else
+      #       exitflag = false
+      #       @infiltrate
+      #       return x, P, q, exitflag
+      # end
+      Psq = similar(P)
+      try
+            Psq[:] = cholesky(Hermitian(P)).U
+      catch
+            try Psq[:] = cholesky(Hermitian(P+diagm(max(diag(P)...)*8*ones(6)))).U
+            catch
+                  exitflag = false
+                  return x, P, q, exitflag
+            end
       end
 
       # Error sigma points:
@@ -117,11 +127,8 @@ function MUKFstep(x, P, q, n, t, y, mtime, dynamics, measModel, Q, R, a, f, gamm
       # propogate
       X,x,P,q = MUKFprop(X,q,n,t,W,Q,dynamics,integrator,a,f)
 
-      # @infiltrate
-
       # Update
       if mtime
-            # @infiltrate
             x,P = MUKFupdate(X,x,P,q,n,W,R,Q,y,measModel,a,f)
       end
 
