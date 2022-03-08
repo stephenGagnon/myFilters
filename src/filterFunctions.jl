@@ -53,13 +53,13 @@ function MUKFupdate(X,x,P,q,n,W,R,Q,yvec,measModel,a,f)
 
     # calculate the mean observation
     # gam = zeros(length(yvec),2*n+1)
+
     gam = Array{Array{Float64,1},1}(undef,2*n+1)
     for j = 1:2*n+1
         qx = qprod(p2q(X[j][1:3]),q)
         gam[j] = measModel(qx)
     end
     y = W[1].*gam[1] + W[3].*sum(view(gam,2:length(gam)))
-
 
     Ytemp = gam .- [y]
     Xtemp = X .- [x]

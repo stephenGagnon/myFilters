@@ -43,3 +43,12 @@ struct filteringProblem
     measurementOffset :: Int64
     measurementTimes :: Vector
 end
+
+struct filteringResults
+    stateEstimate
+    stateTrue
+    covariance
+    measurements
+    measurementTimes
+    time
+end

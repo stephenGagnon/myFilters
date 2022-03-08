@@ -291,9 +291,7 @@ uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 
 [[attitudeFunctions]]
 deps = ["LinearAlgebra", "Random"]
-git-tree-sha1 = "48c777d5bb388473303252eba47861dc1617fb13"
-repo-rev = "attParamTyped"
-repo-url = "/Users/stephengagnon/.julia/dev/attitudeFunctions"
+path = "/Users/stephengagnon/.julia/dev/attitudeFunctions"
 uuid = "7493c2ef-4a11-4f18-aeab-b8ca9ae8f56a"
 version = "0.1.0"
 

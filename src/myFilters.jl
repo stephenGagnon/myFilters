@@ -1,16 +1,17 @@
 module myFilters
-
+using MATLAB
 using LinearAlgebra
 using Statistics
 using attitudeFunctions
 using Distributions
 using Infiltrator
+using PyPlot
 
 include("types.jl")
 include("utilities.jl")
 include("filterFunctions.jl")
 
-export MUKF, RK4, outerProduct, UKFoptions, attFilteringProblem, filteringProblem, simulate, MUKFstep, MUKFprop, MUKFupdate
+export MUKF, RK4, UKFoptions, attFilteringProblem, filteringProblem, filteringResults, simulate, attFiltErrPlot
 
 function MUKF(model :: attFilteringProblem, options :: UKFoptions)
 
@@ -24,7 +25,7 @@ function MUKF(model :: attFilteringProblem, options :: UKFoptions)
       end
 
       # compute the measurements over the simulation period
-      (_,measurements,measurementTimes) = simulate(model,integrator)
+      (xTrue,measurements,measurementTimes) = simulate(model,integrator)
 
       # get length of simulation
       m = length(model.timeVector)
@@ -83,15 +84,32 @@ function MUKF(model :: attFilteringProblem, options :: UKFoptions)
                   xvec[i] = deepcopy(x)
                   Pvec[i] = deepcopy(P)
                   qvec[i] = deepcopy(q)
-                  xvec = xvec[1:i]
-                  Pvec = Pvec[1:i]
-                  qvec = qvec[1:i]
-                  measurementsOut = measurements[1:i]
-                  return xvec,qvec,Pvec,measurementsOut
+                  # xvec = xvec[1:i]
+                  # Pvec = Pvec[1:i]
+                  # qvec = qvec[1:i]
+
+                  stateEstimate = Array{Float64,2}(undef,7,i)
+                  stateTrue = Array{Float64,2}(undef,7,i)
+                  for j = 1:i
+                        stateEstimate[1:4,j] = qvec[j]
+                        stateEstimate[5:7,j] = xvec[j][4:6]
+                        stateTrue[:,j] = xTrue[j]
+                  end
+
+                  return filteringResults(stateEstimate, stateTrue, Pvec[1:i], measurements[1:i], measurementTimes[1:i], model.timeVector[1:i])
             end
       end
 
-      return xvec,qvec,Pvec,measurements
+
+      stateEstimate = Array{Float64,2}(undef,7,m)
+      stateTrue = Array{Float64,2}(undef,7,m)
+      for j = 1:m
+            stateEstimate[1:4,j] = qvec[j]
+            stateEstimate[5:7,j] = xvec[j][4:6]
+            stateTrue[:,j] = xTrue[j]
+      end
+
+      return filteringResults(stateEstimate, stateTrue, Pvec, measurements, measurementTimes, model.timeVector)
 end
 
 function MUKFstep(x, P, q, n, t, y, mtime, dynamics, measModel, Q, R, a, f, gamma, W, integrator)
@@ -107,14 +125,28 @@ function MUKFstep(x, P, q, n, t, y, mtime, dynamics, measModel, Q, R, a, f, gamm
       #       return x, P, q, exitflag
       # end
       Psq = similar(P)
-      try
-            Psq[:] = cholesky(Hermitian(P)).U
-      catch
+
+      if isposdef(P)
+            Psq[:] = cholesky(P).U
+      elseif all(diag(P).>0)
+            if isposdef(Hermitian(P))
+                  Psq[:] = cholesky(Hermitian(P)).U
+            else
+                  try Psq[:] = cholesky(Hermitian(P+diagm(max(diag(P)...)*8*ones(6)))).U
+                  catch
+                        exitflag = false
+                        return x, P, q, exitflag
+                  end
+            end
+      elseif all(diag(P+diagm(max(diag(P)...)*8*ones(6))).>0)
             try Psq[:] = cholesky(Hermitian(P+diagm(max(diag(P)...)*8*ones(6)))).U
             catch
                   exitflag = false
                   return x, P, q, exitflag
             end
+      else
+            exitflag = false
+            return x, P, q, exitflag
       end
 
       # Error sigma points:
@@ -125,8 +157,14 @@ function MUKFstep(x, P, q, n, t, y, mtime, dynamics, measModel, Q, R, a, f, gamm
 
       # @infiltrate
       # propogate
+      P1 = P
+      X1 = X
+      x1 = x
+      q1 = q
       X,x,P,q = MUKFprop(X,q,n,t,W,Q,dynamics,integrator,a,f)
 
+      P2 = P
+      x2 = x
       # Update
       if mtime
             x,P = MUKFupdate(X,x,P,q,n,W,R,Q,y,measModel,a,f)

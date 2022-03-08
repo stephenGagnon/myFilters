@@ -137,74 +137,24 @@ function simulate(fp :: attFilteringProblem, integrator :: Function)
     return xhist,yvec,measurementTimes
 end
 
+function attFiltErrPlot(results :: filteringResults)
 
-# function outerProductSum(a :: Vector{Vector{BigFloat}}, b :: Vector{Vector{BigFloat}})
-#
-#     out = Array{BigFloat,2}(undef,length(a[1]),length(b[1]))
-#     for i = 1:size(out,1)
-#         for j = 1:size(out,2)
-#             out[i,j] = BigFloat(0)
-#         end
-#     end
-#
-#     return outerProductSum!(a,b,out)
-# end
-#
-# function outerProductSum(a :: Vector{Vector{BigFloat}}, b)
-#
-#     out = Array{BigFloat,2}(undef,length(a[1]),length(b[1]))
-#     for i = 1:size(out,1)
-#         for j = 1:size(out,2)
-#             out[i,j] = BigFloat(0)
-#         end
-#     end
-#
-#     return outerProductSum!(a,b,out)
-# end
-#
-# function outerProductSum(a, b :: Vector{Vector{BigFloat}})
-#
-#     out = Array{BigFloat,2}(undef,length(a[1]),length(b[1]))
-#     for i = 1:size(out,1)
-#         for j = 1:size(out,2)
-#             out[i,j] = BigFloat(0)
-#         end
-#     end
-#
-#     return outerProductSum!(a,b,out)
-# end
-#
-# function outerProductSum(a :: Vector{Vector{Float64}}, b :: Vector{Vector{Float64}})
-#     out = zeros(length(a[1]),length(b[1]))
-#     return outerProductSum!(a,b,out)
-# end
-#
-# function outerProductSum!(a, b, out)
-#
-#     for k = 1:length(a)
-#         for i = 1:length(a[1])
-#             for j = 1:length(b[1])
-#                 out[i,j] += a[k][i]*b[k][j]
-#             end
-#         end
-#     end
-#     return out
-# end
-# function outerProductSum(a)
-#
-#     out = Array{typeof(a[1][1]),2}(undef,length(a[1]),length(a[1]))
-#     for i = 1:size(out,1)
-#         for j = 1:size(out,2)
-#             out[i,j] = typeof(a[1][1])(0)
-#         end
-#     end
-#
-#     for k = 1:length(a)
-#         for i = 1:length(a[1])
-#             for j = 1:length(a[1])
-#                 out[i,j] += a[k][i]*a[k][j]
-#             end
-#         end
-#     end
-#     return out
-# end
+    t = results.time
+    xError = similar(results.stateTrue,6,length(t))
+    xError[1:3,:] = attitudeErrors(results.stateTrue[1:4,:],results.stateEstimate[1:4,:])
+    xError[4:6,:] = results.stateTrue[5:7,:] .- results.stateEstimate[5:7,:]
+
+    sig = similar(xError)
+    mult = [6;6;6;3;3;3]
+    for j = 1:length(t)
+        sig[:,j] = sqrt.(diag(results.covariance[j])).*mult
+    end
+
+    pygui(true)
+    figure()
+    for i = 1:size(xError,1)
+      subplot(2,3,i)
+      plot(t,xError[i,:])
+      plot(t,sig[i,:],"--r",t,-sig[i,:],"--r")
+    end
+end
