@@ -158,3 +158,62 @@ function attFiltErrPlot(results :: filteringResults)
       plot(t,sig[i,:],"--r",t,-sig[i,:],"--r")
     end
 end
+
+function lightMagFilteringProbGenerator(;x0 = zeros(6), P0 = zeros(6,6), x0true = [0;0;0;1;0;0;0], xf0 = x0true, Q = zeros(7,7), R = nothing, measInt = 1, measOffset = 0, tvec = [1:.1:10...], measTimes = nothing, scenParams = nothing, objParams = nothing, vectorized = false)
+
+    (sat,_,scen) = customScenarioGenerator(scenParams = scenParams, objParams = objParams, vectorized = vectorized)
+
+    dynamicsFunc = (t,x) -> attDyn(t,x,sat.J,inv(sat.J),[0;0;0])
+    measModel = (x) -> _Fobs(view(x,1:4), sat.nvecs, sat.uvecs, sat.vvecs,
+    sat.Areas, sat.nu, sat.nv, sat.Rdiff, sat.Rspec, scen.sunVec, scen.obsVecs, scen.d, scen.C, qRotate)
+
+    if isnothing(R)
+        R = zeros(scen.obsNo,scen.obsNo)
+    elseif (size(R,1) == scen.obsNo & size(R,2) == scen.obsNo)
+        # do nothing
+    elseif (!(size(R,1) == scen.obsNo) | !(size(R,2) == scen.obsNo))
+        error("Measurment Noise matrix must have same dimension as number of observers")
+    else
+        error("Please Provide a valid measurement Noise matrix")
+    end
+
+    if isnothing(measTimes)
+        measTimes = Array{Bool,1}(undef,length(tvec))
+        measTimes .= false
+    elseif length(measTimes) !== length(tvec)
+        error("length of time span and measurement time vector must match")
+    else
+        error("please provide valid measurement times")
+    end
+
+    return attFilteringProblem(x0, P0, x0true, xf0, Q, R, tvec, dynamicsFunc, measModel, scen.obsNo, measInt, measOffset, measTimes)
+end
+
+function AttFilteringProbGenerator(;x0 = zeros(6), P0 = zeros(6,6), x0true = [0;0;0;1;0;0;0], xf0 = x0true, Q = zeros(7,7), R = nothing, measInt = 1, measOffset = 0, tvec = [1:.1:10...], measTimes = nothing, scenParams = nothing, objParams = nothing, vectorized = false)
+
+    (sat,_,scen) = customScenarioGenerator(scenParams = scenParams, objParams = objParams, vectorized = vectorized)
+
+    dynamicsFunc = (t,x) -> attDyn(t,x,sat.J,inv(sat.J),[0;0;0])
+    measModel = (x) -> x[1:4]
+
+    if isnothing(R)
+        R = zeros(4,4)
+    elseif (size(R,1) == 4 & size(R,2) == 4)
+        # do nothing
+    elseif (!(size(R,1) == 4) | !(size(R,2) == 4))
+        error("Measurment Noise matrix must have same dimension as measurement")
+    else
+        error("Please Provide a valid measurement Noise matrix")
+    end
+
+    if isnothing(measTimes)
+        measTimes = Array{Bool,1}(undef,length(tvec))
+        measTimes .= false
+    elseif length(measTimes) !== length(tvec)
+        error("length of time span and measurement time vector must match")
+    else
+        error("please provide valid measurement times")
+    end
+
+    return attFilteringProblem(x0, P0, x0true, xf0, Q, R, tvec, dynamicsFunc, measModel, scen.obsNo, measInt, measOffset, measTimes)
+end
