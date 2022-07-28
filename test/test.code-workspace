@@ -1,0 +1,30 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../lightCurveOptimization"
+		},
+		{
+			"path": "../../lightCurveModeling"
+		},
+		{
+			"path": "../../attitudeAnalysisFunctions"
+		},
+		{
+			"path": "../../MATLABfunctions"
+		},
+		{
+			"path": "../../attitudeFunctions"
+		},
+		{
+			"path": "../../visibilityGroups"
+		},
+		{
+			"path": "../../../../Julia/HeuristicOptimization"
+		}
+	],
+	"settings": {
+	}
+}
