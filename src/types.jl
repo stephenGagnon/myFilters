@@ -1,14 +1,12 @@
 struct UKFoptions
-    a::Float64
-    f::Float64
     alpha::Float64
     beta::Float64
     kappa::Float64
     integrator::Union{Symbol,Function}
 end
 
-function UKFoptions(; a=1, f=2 * (a + 1), alpha=1, beta=2, kappa=NaN, integrator=:RK4)
-    return UKFoptions(a, f, alpha, beta, kappa, integrator)
+function UKFoptions(;alpha=1, beta=2, kappa=NaN, integrator=:RK4)
+    return UKFoptions(alpha, beta, kappa, integrator)
 end
 
 struct EKFoptions
@@ -30,7 +28,7 @@ end
 
 struct GMfilterInit
     means::Vector{V} where {T<:Number,V<:Vector{T}}
-    covariances::Vector{P} where {T<:Number,P<:Array{T,2}}
+    covariances::Vector{P} where {T<:Number, P<:Array{T,2}}
     weights :: Vector
     trueState::Vector
 end
@@ -39,8 +37,8 @@ struct linearFilteringProblem
     initialState::Vector
     initialCovariance::Matrix
     trueInitialState::Vector
-    processNoise::Matrix
-    measurementNoise::Matrix
+    processNoise::Union{Matrix, Number}
+    measurementNoise::Union{Matrix, Number}
     measurementMatrix::Matrix
     stateMatrix::Matrix
     timeVector::Vector
@@ -54,8 +52,9 @@ end
 
 struct nlFilteringProblem
     initial::Union{attFilterInit,nlFilterInit,GMfilterInit}
-    processNoise::Matrix
-    measurementNoise::Matrix
+    processNoise::Union{Matrix, Number}
+    measurementNoise::Union{Matrix, Number}
+    includeNoiseOnMeasurments :: Bool
     dynamics::Function
     measurementModel::Function
     timeStep::Float64
@@ -74,11 +73,20 @@ filteringProblem = Union{linearFilteringProblem,nlFilteringProblem}
 
 struct filteringResults
     stateEstimate
-    stateTrue
     covariance
+    residuals
+    residualCovariance
+end
+
+struct filteringSimulationResults
+    stateEstimate
+    covariance
+    residuals
+    residualCovariance
+    stateTrue
+    time :: Vector
     measurements
     measurementTimes
-    time
 end
 
 

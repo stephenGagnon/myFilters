@@ -1,5 +1,5 @@
 # generate a strucutre containing all the information necessary for filtering based on light magnitude measurements
-function lightMagFilteringProbGenerator(;x0 = zeros(6), P0 = zeros(6,6), x0true = [0;0;0;1;0;0;0], xf0 = x0true, Q = zeros(7,7), R = nothing, dt = .1, tf = 1.0, measInt = 1,  meas_t_init = 0, measTimeFunc = nothing, integratorSteps = 1, simTimeFac = 5, underweight = 1.2, type = :MUKF, scenParams = nothing, objParams = nothing, multiSpectral = false, vectorized = false)
+function lightMagFilteringProbGenerator(;x0 = zeros(6), P0 = zeros(6,6), x0true = [0;0;0;1;0;0;0], xf0 = x0true, Q = zeros(7,7), R = nothing, unitConversionFactor = 1.0, dt = .1, tf = 1.0, measInt = 1,  meas_t_init = 0, measTimeFunc = nothing, includeNoiseOnMeasurments = true, integratorSteps = 1, simTimeFac = 5, underweight = 1.2, type = :MUKF, scenParams = nothing, objParams = nothing, multiSpectral = false, vectorized = false)
 
     (sat,_,scen) = customScenarioGenerator(scenParams = scenParams, objParams = objParams, multiSpectral = multiSpectral, vectorized = vectorized)
 
@@ -7,35 +7,33 @@ function lightMagFilteringProbGenerator(;x0 = zeros(6), P0 = zeros(6,6), x0true 
 
     dynamicsFunc = (t,x) -> attDyn(t,x,sat.J,inv(sat.J),[0;0;0])
     measModel = (x) -> _Fobs(x[1:4], sat.nvecs, sat.uvecs, sat.vvecs,
-    sat.Areas, sat.nu, sat.nv, sat.Rdiff, sat.Rspec, scen.sunVec, scen.obsVecs, scen.d, scen.C, qRotate)
+    sat.Areas, sat.nu, sat.nv, sat.Rdiff, sat.Rspec, scen.sunVec, scen.obsVecs, scen.d, scen.C, qRotate, unitConversionFactor)
 
 
     measDim = scen.obsNo*binNo
     if isnothing(R)
         R = zeros(measDim,measDim)
-    elseif (size(R,1) == measDim & size(R,2) == measDim)
+    elseif typeof(R) <: Matrix
         # do nothing
     elseif size(R) == ()
-        R = R^2*diagm(ones(measDim))
+        R = (unitConversionFactor * R)^2*diagm(ones(measDim))
     elseif (!(size(R,1) == measDim) | !(size(R,2) == measDim))
         error("Measurment Noise matrix must be a square matrix of the same dimension as number of observers")
     else
         error("Please Provide a valid measurement Noise matrix")
     end
-
-    init = attFilterInit(x0, P0, x0true, xf0)
-
-    return nlFilteringProblem(init, Q, R, dynamicsFunc, measModel, dt, tf, measDim, measInt, meas_t_init, measTimeFunc, integratorSteps, simTimeFac, underweight, type)
+    
+    return nlFilteringProblem(attFilterInit(x0, P0, x0true, xf0), Q, R, includeNoiseOnMeasurments, dynamicsFunc, measModel, dt, tf, measDim, measInt, meas_t_init, measTimeFunc, integratorSteps, simTimeFac, underweight, type)
 end
 
-function GM_LM_filteringProbGen(x0, P0; x0true=[0; 0; 0; 1; 0; 0; 0], Q=zeros(7, 7), R=nothing, dt=0.1, tf=1.0, measInt=1, meas_t_init=0, measTimeFunc=nothing, integratorSteps=1, simTimeFac=5, underweight=1.2, type = :GM_MUKF, scenParams=nothing, objParams=nothing, multiSpectral=false, vectorized=false)
+function GM_LM_filteringProbGen(x0, P0; weights = nothing, x0true=[0; 0; 0; 1; 0; 0; 0], Q=zeros(7, 7), R=nothing, unitConversionFactor = 1.0, dt=0.1, tf=1.0, measInt=1, meas_t_init=0, measTimeFunc=nothing, includeNoiseOnMeasurments = true, integratorSteps=1, simTimeFac=5, underweight=1.2, type = :GM_MUKF, scenParams=nothing, objParams=nothing, multiSpectral=false, vectorized=false)
 
     (sat, _, scen) = customScenarioGenerator(scenParams=scenParams, objParams=objParams, multiSpectral=multiSpectral, vectorized=vectorized)
 
     binNo = length(sat.Rdiff[1]) # number of frequnecy bins for model
 
     dynamicsFunc = (t, x) -> attDyn(t, x, sat.J, inv(sat.J), [0; 0; 0])
-    measModel = (x) -> _Fobs(x[1:4], sat.nvecs, sat.uvecs, sat.vvecs,
+    measModel = (x) -> unitConversionFactor * _Fobs(x[1:4], sat.nvecs, sat.uvecs, sat.vvecs,
         sat.Areas, sat.nu, sat.nv, sat.Rdiff, sat.Rspec, scen.sunVec, scen.obsVecs, scen.d, scen.C, qRotate)
 
 
@@ -45,19 +43,23 @@ function GM_LM_filteringProbGen(x0, P0; x0true=[0; 0; 0; 1; 0; 0; 0], Q=zeros(7,
     elseif (size(R, 1) == measDim & size(R, 2) == measDim)
         # do nothing
     elseif size(R) == ()
-        R = R^2 * diagm(ones(measDim))
+        R = (unitConversionFactor * R)^2 * diagm(ones(measDim))
     elseif (!(size(R, 1) == measDim) | !(size(R, 2) == measDim))
         error("Measurment Noise matrix must be a square matrix of the same dimension as number of observers")
     else
         error("Please Provide a valid measurement Noise matrix")
     end
 
-    weights_init = Array{Float64,1}(undef,length(x0))
-    weights_init .= 1 / length(x0)
+    if isnothing(weights)
+        weights_init = weights
+    else
+        weights_init = Array{Float64,1}(undef,length(x0))
+        weights_init .= 1 / length(x0)
+    end
 
     init = GMfilterInit(x0, P0, weights_init, x0true)
 
-    return nlFilteringProblem(init, Q, R, dynamicsFunc, measModel, dt, tf, measDim, measInt, meas_t_init, measTimeFunc, integratorSteps, simTimeFac, underweight, type)
+    return nlFilteringProblem(init, Q, R, includeNoiseOnMeasurments, dynamicsFunc, measModel, dt, tf, measDim, measInt, meas_t_init, measTimeFunc, integratorSteps, simTimeFac, underweight, type)
 
 end
 
