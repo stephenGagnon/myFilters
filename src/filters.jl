@@ -70,7 +70,7 @@ function MUKF(model::nlFilteringProblem, options::UKFoptions, timeVector, integr
       # compute initial residuals
       X, _ = sigmaPoints(X, x, P, Psq, gamma)
       # @infiltrate
-      residual, Pyy = computeUKFResidual(measurements[1],X,W,q,6,measModel)
+      residual, Pyy = computeUKFResidual(measurements[1],X,W,q,6,measModel, uwCoeff, R)
 
       Pyyvec[1] = copy(Pyy)
       residual_history[1] = copy(residual)
@@ -145,7 +145,7 @@ function MUKF(model::nlFilteringProblem, options::UKFoptions, timeVector, integr
                   q = q ./ norm(q)
 
             else
-                  residual, Pyy = computeUKFResidual(measurements[i],X,W,q,6,measModel)
+                  residual, Pyy = computeUKFResidual(measurements[i],X,W,q,6,measModel, uwCoeff, R)
                   # update quaternion
                   # convert to error quaternions
                   q = qprod(p2q(x[1:3],1,4), q)
@@ -316,7 +316,7 @@ function GM_MUKF(model::nlFilteringProblem, options::UKFoptions)
                         q = q ./ norm(q)
       
                   else
-                        residual, Pvv = computeUKFResidual(measurements[i],X,W,q,6,measModel)
+                        residual, Pvv = computeUKFResidual(measurements[i],X,W,q,6,measModel, uwCoeff, R)
                         # update quaternion
                         # convert to error quaternions
                         q = qprod(p2q(x[1:3],1,4), q)

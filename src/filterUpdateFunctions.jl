@@ -75,10 +75,10 @@ function MUKFupdate(X,x,P,q,n,W,R,underweightCoeff,yvec,measModel;diagnostics=fa
     x = x + K*(yvec - y)
     P = P - K*Pvv*K'
 
-    return x, P, Pyy, yvec - y
+    return x, P, Pvv, yvec - y
 end
 
-function computeUKFResidual(yvec,X,W,q,n,measModel)
+function computeUKFResidual(yvec, X, W, q, n, measModel, underweightCoeff, R)
     # calculate the mean observation
     gam = Array{Array{Float64,1},1}(undef,2*n+1)
     for j = 1:2*n+1
@@ -93,7 +93,9 @@ function computeUKFResidual(yvec,X,W,q,n,measModel)
     end
 
     Pyy = W[2] .* Y_deviations[:,1]*Y_deviations[:,1]' + W[4] .* Y_deviations[:,2:end]*Y_deviations[:,2:end]'
-    return yvec-y, Pyy
+    Pvv = underweightCoeff*Pyy + R
+
+    return yvec-y, Pvv
 end
 
 function KFupdate(x, P, H, R, meas, calcResid)
