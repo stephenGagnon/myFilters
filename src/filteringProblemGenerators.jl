@@ -2,7 +2,6 @@
 function lightMagFilteringProbGenerator(;x0 = zeros(6), P0 = zeros(6,6), x0true = [0;0;0;1;0;0;0], xf0 = x0true, Q = zeros(7,7), R = nothing, unitConversionFactor = 1.0, dt = .1, tf = 1.0, measInt = 1,  meas_t_init = 0, measTimeFunc = nothing, includeNoiseOnMeasurments = true, integratorSteps = 1, simTimeFac = 5, underweight = 1.2, type = :MUKF, scenParams = nothing, objParams = nothing, multiSpectral = false, vectorized = false)
 
     (sat,_,scen) = customScenarioGenerator(scenParams = scenParams, objParams = objParams, multiSpectral = multiSpectral, vectorized = vectorized)
-
     binNo = length(sat.Rdiff[1]) # number of frequnecy bins for model
 
     dynamicsFunc = (t,x) -> attDyn(t,x,sat.J,inv(sat.J),[0;0;0])
@@ -33,8 +32,8 @@ function GM_LM_filteringProbGen(x0, P0; weights = nothing, x0true=[0; 0; 0; 1; 0
     binNo = length(sat.Rdiff[1]) # number of frequnecy bins for model
 
     dynamicsFunc = (t, x) -> attDyn(t, x, sat.J, inv(sat.J), [0; 0; 0])
-    measModel = (x) -> unitConversionFactor * _Fobs(x[1:4], sat.nvecs, sat.uvecs, sat.vvecs,
-        sat.Areas, sat.nu, sat.nv, sat.Rdiff, sat.Rspec, scen.sunVec, scen.obsVecs, scen.d, scen.C, qRotate)
+    measModel = (x) -> _Fobs(x[1:4], sat.nvecs, sat.uvecs, sat.vvecs,
+        sat.Areas, sat.nu, sat.nv, sat.Rdiff, sat.Rspec, scen.sunVec, scen.obsVecs, scen.d, scen.C, qRotate, unitConversionFactor)
 
 
     measDim = scen.obsNo * binNo

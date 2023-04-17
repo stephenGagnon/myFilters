@@ -69,11 +69,15 @@ function MUKFupdate(X,x,P,q,n,W,R,underweightCoeff,yvec,measModel;diagnostics=fa
     Pxy = W[2].*outerProduct(X_deviations[1],Y_deviations[1]) + W[4].*outerProductSum(X_deviations[2:end], Y_deviations[2:end])
 
     # calculate the gain
-    K = Pxy*pinv(Pvv)
+    try 
+        K = Pxy*pinv(Pvv)    # update the state and covariance
+        x = x + K*(yvec - y)
+        P = P - K*Pvv*K'
+    catch
+        @infiltrate
+    end
 
-    # update the state and covariance
-    x = x + K*(yvec - y)
-    P = P - K*Pvv*K'
+
 
     return x, P, Pvv, yvec - y
 end
@@ -110,7 +114,7 @@ function KFupdate(x, P, H, R, meas, calcResid)
 
     # measurement update
     K = KalmanGain(P, H, R)
-    x_up = x + K*()
+    x_up = x + K*(residual)
 
     Pup = (eye(length(x)) - K*H)*P
 

@@ -20,6 +20,6 @@ include("filterUpdateFunctions.jl")
 include("filteringProblemGenerators.jl")
 include("simulators.jl")
 
-export KF, EKF, MEKF, MUKF, GM_MUKF, attitudeFilteringSimulation, RK4, _RK4, UKFoptions, EKFoptions, nlFilteringProblem, linearFilteringProblem, filteringProblem, attFilterInit, nlFilterInit, filteringResults, simulate, attFiltErrPlot, lightMagFilteringProbGenerator, AttFilteringProbGenerator, linearFilteringTestProbGen, GM_LM_filteringProbGen, attFilterPerformanceEval
+export KF, EKF, MEKF, MUKF, GM_MUKF, attitudeFilteringSimulation, RK4, _RK4, UKFoptions, EKFoptions, nlFilteringProblem, linearFilteringProblem, filteringProblem, attFilterInit, nlFilterInit, filteringResults, simulate, attFiltErrPlot, lightMagFilteringProbGenerator, AttFilteringProbGenerator, linearFilteringTestProbGen, GM_LM_filteringProbGen, attFilterPerformanceEval, GMattitudeFilteringSimulation, attitudeFilteringSimulation, filteringSimulationResults
 
 end # module
